@@ -44,7 +44,7 @@ def main():
 
     if existing_user:
         # For Existing user start billing
-        print("Custom Details Exist. Starting the billing.")
+        print("Customer Details Exist. Starting the billing.")
         billing_function()
     else:
         # Register User for Non Existing user
