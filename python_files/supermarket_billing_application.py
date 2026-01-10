@@ -38,6 +38,7 @@ def billing_function():
 
 
 def main():
+    print("Welcome to Star Supermarket")
     cust_phone_num = input("Enter Customer Phone Number: ")
     existing_user = data_retrieve(cust_phone_num)
 
