@@ -1,4 +1,7 @@
 # Super-Billing-Core: Customer & Database Management System
+
+<img width="1024" height="819" alt="Gemini_Generated_Image_ai6n45ai6n45ai6n" src="https://github.com/user-attachments/assets/532335ac-c5ed-40d9-859f-56126a28706f" />
+
 A robust, lightweight desktop application designed to streamline the checkout process and inventory management for retail environments. This application provides a seamless interface for cashiers to process transactions, manage stock levels, and generate digital invoices.
 
 
