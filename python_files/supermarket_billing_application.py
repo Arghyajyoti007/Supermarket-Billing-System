@@ -3,7 +3,7 @@ import math
 import mysql.connector
 
 
-conn_obj = mysql.connector.connect(host="localhost", user="root", password="Arghya@123", database="Billing_Application") # to connect with MySql
+conn_obj = mysql.connector.connect(host="localhost", user="root", password="ENTER MYSQL DATABASE PASSWORD", database="Billing_Application") # to connect with MySql
 cur_obj = conn_obj.cursor() # to execute the sql queries, hit SQL
 
 # To retrieve user data based on Phone Number from Customer Details Table
