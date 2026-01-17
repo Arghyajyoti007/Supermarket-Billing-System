@@ -3,14 +3,14 @@ import math
 import mysql.connector
 
 
-conn_obj = mysql.connector.connect(host="localhost", user="root", password="ENTER MYSQL DATABASE PASSWORD", database="Billing_Application") # to connect with MySql
+conn_obj = mysql.connector.connect(host="localhost", user="root", password="YOUR DATABASE PASSWORD", database="Billing_Application") # to connect with MySql
 cur_obj = conn_obj.cursor() # to execute the sql queries, hit SQL
 
 # To retrieve user data based on Phone Number from Customer Details Table
 def data_retrieve(ph_no):
     query = f"select * from cust_details where c_ph_no = {ph_no}"
     result = None
-    try:
+    try:    
         cur_obj.execute(query) # To run the given query
         result = cur_obj.fetchone()  # limit 1 in SQL
         conn_obj.commit()
@@ -91,7 +91,8 @@ def bill_id_retrieve_Analytics_table():
 # To Entry new Bill Data in bill_details table
 def bill_data_entry(cust_id, cust_name, p_id, p_quantity):
     bill_id_db = bill_id_retrieve_Analytics_table()
-    if bill_id_db[0]:
+    print(bill_id_db)
+    if bill_id_db is not None:
         new_bill_id = bill_id_db[0]+1
     else:
         new_bill_id = 1
