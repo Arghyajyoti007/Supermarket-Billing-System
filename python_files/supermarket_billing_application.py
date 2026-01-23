@@ -1,86 +1,214 @@
-from fpdf import FPDF
-from datetime import datetime
+import math
 
-def generate_bill_pdf(cust_phone_num):
-    # Fetch latest bill ID for this customer
-    query = """
-        SELECT bill_id, c_name, c_ph_no, total_bill_value, total_amount_payble_after_tax, timestamp
-        FROM analytics_table
-        WHERE c_ph_no = %s
-        ORDER BY bill_id DESC
-        LIMIT 1
-    """
-    cur_obj.execute(query, (cust_phone_num,))
-    bill_summary = cur_obj.fetchone()
+import mysql.connector
 
-    if not bill_summary:
-        print("No billing data found to generate PDF.")
-        return
 
-    bill_id, cust_name, ph_no, total_amt, final_amt, bill_date = bill_summary
+conn_obj = mysql.connector.connect(host="localhost", user="root", password="Arghya@123", database="Billing_Application") # to connect with MySql
+cur_obj = conn_obj.cursor() # to execute the sql queries, hit SQL
 
-    # Fetch item-wise details
-    query = """
-        SELECT p.p_name, p.p_price, b.p_quantity
-        FROM billing_details b
-        JOIN p_details p ON b.p_id = p.pid
-        WHERE b.bill_id = %s
-    """
-    cur_obj.execute(query, (bill_id,))
-    items = cur_obj.fetchall()
+# To retrieve user data based on Phone Number from Customer Details Table
+def data_retrieve(ph_no):
+    query = f"select * from cust_details where c_ph_no = {ph_no}"
+    result = None
+    try:
+        cur_obj.execute(query) # To run the given query
+        result = cur_obj.fetchone()  # limit 1 in SQL
+        conn_obj.commit()
+    except mysql.connector.Error as e:
+        print("Error retrieving data from MySQL:", e)
+        conn_obj.rollback()  # it is used if the operation is failed then it will not reflect in your database
+    return result
 
-    # ---------------- PDF Creation ----------------
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
 
-    # Header
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "CASH MEMO", ln=True, align="C")
+# To Create new user in the Customer Details table in Database
+def customer_entry(cust_full_name, cust_address, cust_phone_num):
+    query = f"insert into cust_details (c_full_name, c_address, c_ph_no) values (%s, %s, %s);"
+    data = (cust_full_name, cust_address, cust_phone_num)
 
-    pdf.ln(5)
-    pdf.set_font("Arial", size=10)
-    pdf.cell(0, 8, f"Bill No: {bill_id}", ln=True)
-    pdf.cell(0, 8, f"Date: {bill_date.strftime('%d-%m-%Y %H:%M')}", ln=True)
+    try:
+        cur_obj.execute(query,data)
+        print("Custom Details Inserted")
+        conn_obj.commit()
+    except mysql.connector.Error as e:
+        print("Error retrieving data from MySQL:", e)
+        conn_obj.rollback()
 
-    pdf.ln(5)
-    pdf.cell(0, 8, f"Customer Name: {cust_name}", ln=True)
-    pdf.cell(0, 8, f"Phone Number: {ph_no}", ln=True)
 
-    pdf.ln(8)
+# To retrieve product details based on product ID from Product Details Table
+def product_details_retrieve(pid):
+    query = f"select * from p_details where pid = {pid}"
+    result = None
+    try:
+        cur_obj.execute(query) # To run the given query
+        result = cur_obj.fetchone()  # limit 1 in SQL
+        conn_obj.commit()
+    except mysql.connector.Error as e:
+        print("Error retrieving data from MySQL:", e)
+        conn_obj.rollback()
+    return result
 
-    # Table Header
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(80, 8, "Description", border=1)
-    pdf.cell(30, 8, "Price", border=1)
-    pdf.cell(30, 8, "Quantity", border=1)
-    pdf.cell(40, 8, "Amount", border=1, ln=True)
 
-    # Table Rows
-    pdf.set_font("Arial", size=10)
-    for item in items:
-        name, price, qty = item
-        amount = float(price) * qty
+# To update the Product Stock in Database
+def update_stock(pid, p_quantity_new):
+    query = f"update p_details set p_stock = {p_quantity_new} where pid = {pid}"
 
-        pdf.cell(80, 8, name, border=1)
-        pdf.cell(30, 8, f"{price}", border=1)
-        pdf.cell(30, 8, str(qty), border=1)
-        pdf.cell(40, 8, f"{amount:.2f}", border=1, ln=True)
+    try:
+        cur_obj.execute(query)
+        print("Product Details Updated")
+        conn_obj.commit()
+    except mysql.connector.Error as e:
+        print("Error updating data from MySQL:", e)
+        conn_obj.rollback()
 
-    pdf.ln(5)
+# To Entry new data in Analytics Table
+def data_analysis_entry(cust_phone_num,calculated_amount, gst_price):
+    cust_details = data_retrieve(cust_phone_num)
+    query = f"insert into analytics_table (c_id, c_name, c_ph_no, total_bill_value, total_amount_payble_after_tax) values (%s,%s,%s,%s,%s);"
+    values = (cust_details[0],cust_details[1],cust_details[3],calculated_amount,gst_price)
+    try:
+        cur_obj.execute(query,values) # To run the given query
+        print("Analytics Table Data Inserted")
+        conn_obj.commit()
+    except mysql.connector.Error as e:
+        print("Error retrieving data from MySQL:", e)
+        conn_obj.rollback()
 
-    # Totals
-    pdf.cell(140, 8, "Total", border=1)
-    pdf.cell(40, 8, f"{total_amt:.2f}", border=1, ln=True)
 
-    pdf.cell(140, 8, "Total Payable (After GST)", border=1)
-    pdf.cell(40, 8, f"{final_amt:.2f}", border=1, ln=True)
+# To retrieve Bill ID from Bill Details table
+def bill_id_retrieve_Analytics_table():
+    query = "select bill_id from analytics_table order by bill_id desc limit 1"
+    bill_id = 0
+    try:
+        cur_obj.execute(query)
+        bill_id = cur_obj.fetchone()
+        conn_obj.commit()
+    except mysql.connector.Error as e:
+        print("Error retrieving data from MySQL:", e)
+        conn_obj.rollback()
+    return bill_id
 
-    pdf.ln(10)
-    pdf.cell(0, 8, "Thank you for shopping with us!", ln=True, align="C")
 
-    # Save PDF
-    file_name = f"Bill_{bill_id}.pdf"
-    pdf.output(file_name)
+# To Entry new Bill Data in bill_details table
+def bill_data_entry(cust_id, cust_name, p_id, p_quantity):
+    bill_id_db = bill_id_retrieve_Analytics_table()
+    # print(bill_id_db)
+    if bill_id_db is not None:
+        new_bill_id = bill_id_db[0]+1
+    else:
+        new_bill_id = 1
+    query = f"insert into billing_details (bill_id, cust_id, cust_name, p_id, p_quantity) values ({new_bill_id}, {cust_id}, \"{cust_name}\", {p_id}, {p_quantity});"
 
-    print(f"PDF generated successfully: {file_name}")
+    try:
+        cur_obj.execute(query)
+        print("Bill Data Inserted Successfully ")
+        conn_obj.commit()
+
+    except mysql.connector.Error as e:
+        print("Error retrieving data from MySQL:", e)
+        conn_obj.rollback()
+
+
+# For the Billing of the user
+def billing_function(cust_phone_num):
+    print("Starting the billing.")
+    total_payable = 0.0
+    count = 0
+    stop_option = ""
+    while True:
+        if count>0:
+            stop_option = input("Press 's'/'S' Enter to Stop Billing. Press Any Other Key to Continue. ======> ").lower()
+            print("----------------------------------------------------------------------------------------------")
+        if stop_option == "s":
+            break
+        else:
+            count += 1
+            pid = int(input("Enter the Product ID: "))
+            print("----------------------------------------------------------------------------------------------")
+
+            p_details = product_details_retrieve(pid)
+            if p_details:
+                p_price = p_details[2]
+                p_name = p_details[1]
+                p_stock_db = p_details[3]
+                print(f"Product Name ===> {p_name} ")
+                print("----------------------------------------------------------------------------------------------")
+
+                print(f"Product Price ===>  {p_price} ")
+                print("----------------------------------------------------------------------------------------------")
+
+                print(f"Product Stock ===> {p_stock_db} ")
+                print("----------------------------------------------------------------------------------------------")
+
+                p_quantity = int(input("Enter the Product Quantity Customer Brought: "))
+                print("----------------------------------------------------------------------------------------------")
+
+                # in case product is not available we will not consider it
+                if p_stock_db < p_quantity or p_stock_db==0:
+                    print("Product is not available in Stock!")
+                    print(
+                        "----------------------------------------------------------------------------------------------")
+
+                # otherwise continue calculating
+                else:
+                    total_price = float(p_price) * p_quantity
+                    print("Total Price : ", total_price)
+                    print(
+                        "----------------------------------------------------------------------------------------------")
+
+                    total_payable = total_payable + total_price
+                    print(f"Total Calculated Amount: {total_payable}")
+                    print(
+                        "----------------------------------------------------------------------------------------------")
+
+                    update_stock(pid, (p_stock_db-p_quantity))
+
+                    # to find the customer details to pass into bill data entry method
+                    c_details = data_retrieve(cust_phone_num)
+
+                    # To entry bill data in bill details table
+                    bill_data_entry(c_details[0], c_details[1], pid, p_quantity)
+
+
+            else:
+                print("No Product Details Found.")
+                print("----------------------------------------------------------------------------------------------")
+
+    gst_value = input("Enter the GST value if applicable: ")
+    print("----------------------------------------------------------------------------------------------")
+
+    if gst_value=="":
+        gst_value = 0
+    else:
+        gst_value = float(gst_value)
+    total_payable_after_gst = total_payable + total_payable * (gst_value / 100)
+    math.ceil(total_payable_after_gst)
+    print(f"Total Payable after {gst_value}% GST Tax:  {total_payable_after_gst}")
+    print("----------------------------------------------------------------------------------------------")
+
+    data_analysis_entry(cust_phone_num, total_payable, total_payable_after_gst)
+
+    return float(total_payable_after_gst)
+
+
+# Main Entry Point
+def main():
+    cust_phone_num = input("Enter Customer Phone Number: ")
+    existing_user = data_retrieve(cust_phone_num)
+    total_payable = 0.0
+    if existing_user:
+        # For Existing user start billing
+        print(f"Hi {existing_user[1]}, Welcome to Star Super Market!!")
+        total_payable = billing_function(cust_phone_num)
+    else:
+        # Register User for Non Existing user
+        print("To start billing we need to register your Mobile Number")
+        cust_full_name = input("Enter Full Name: ")
+        cust_address = input("Enter Address: ")
+        customer_entry(cust_full_name, cust_address, cust_phone_num)
+        total_payable = billing_function(cust_phone_num)
+
+
+# Entry Point of the Code
+main()
+
+conn_obj.close()
