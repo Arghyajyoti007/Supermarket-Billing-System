@@ -18,7 +18,7 @@ def qr_code_scanner():
         if data:
             cap.release()
             cv2.destroyAllWindows()
-            print(data.strip())
+            # print(data.strip())
             return data.strip()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
