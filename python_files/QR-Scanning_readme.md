@@ -12,19 +12,23 @@ OpenCV is used for **camera access, image processing, and QR code detection**.
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cap = cv2.VideoCapture(0)   `
+```
+cap = cv2.VideoCapture(0)
+```
 
-**Why used:**To access the system’s webcam for real-time video capture.
 
-**Description:**Creates a video capture object that reads frames from the camera.0 refers to the default webcam.
+**Why used:** To access the system’s webcam for real-time video capture.
+
+**Description:** Creates a video capture object that reads frames from the camera.0 refers to the default webcam.
 
 ### cap.read()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   ret, frame = cap.read()   `
-
-**Why used:**To capture individual frames from the camera stream.
+```
+ret, frame = cap.read()
+```
+**Why used:** To capture individual frames from the camera stream.
 
 **Description:**
 
@@ -37,21 +41,25 @@ Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQL
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   detector = cv2.QRCodeDetector()   `
+```   
+detector = cv2.QRCodeDetector()
+```
 
-**Why used:**To detect and decode QR codes without external libraries.
+**Why used:** To detect and decode QR codes without external libraries.
 
-**Description:**Provides built-in QR code detection and decoding functionality in OpenCV.
+**Description:** Provides built-in QR code detection and decoding functionality in OpenCV.
 
 ### detector.detectAndDecode()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   data, bbox, _ = detector.detectAndDecode(frame)   `
+```   
+data, bbox, _ = detector.detectAndDecode(frame)
+```
 
-**Why used:**To locate and decode QR codes from a camera frame.
+**Why used:** To locate and decode QR codes from a camera frame.
 
-**Description:**Returns:
+**Description:** Returns:
 
 *   data → Decoded QR text
     
@@ -64,41 +72,49 @@ Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQL
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cv2.imshow("QR Code Scanner", frame)   `
+```   
+cv2.imshow("QR Code Scanner", frame)
+```
 
-**Why used:**To display live camera feed to the user.
+**Why used:** To display live camera feed to the user.
 
-**Description:**Opens a window showing real-time video capture.
+**Description:** Opens a window showing real-time video capture.
 
 ### cv2.waitKey()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cv2.waitKey(1)   `
+```   
+cv2.waitKey(1)
+```
 
-**Why used:**To listen for keyboard input and control frame refresh.
+**Why used:** To listen for keyboard input and control frame refresh.
 
-**Description:**Waits for a key press for the specified time in milliseconds.
+**Description:** Waits for a key press for the specified time in milliseconds.
 
 ### cv2.destroyAllWindows()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cv2.destroyAllWindows()   `
+```   
+cv2.destroyAllWindows()
+```
 
-**Why used:**To properly close all OpenCV windows.
+**Why used:** To properly close all OpenCV windows.
 
-**Description:**Prevents hanging GUI windows and frees resources.
+**Description:** Prevents hanging GUI windows and frees resources.
 
 ### cap.release()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cap.release()   `
+```   
+cap.release()
+```
 
-**Why used:**To release the webcam resource after scanning.
+**Why used:** To release the webcam resource after scanning.
 
-**Description:**Stops camera capture and frees the device for other applications.
+**Description:** Stops camera capture and frees the device for other applications.
 
 🔹 Python Built-in Functions
 ----------------------------
@@ -107,52 +123,58 @@ Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQL
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   print("Scanning QR... Press 'q' to exit")   `
+```   
+print("Scanning QR... Press 'q' to exit")
+```
 
-**Why used:**To display runtime instructions to the user.
+**Why used:** To display runtime instructions to the user.
 
-**Description:**Outputs text to the console.
+**Description:** Outputs text to the console.
 
 ### ord()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   ord('q')   `
+```   
+ord('q')
+```
 
-**Why used:**To compare keyboard input with ASCII values.
+**Why used:** To compare keyboard input with ASCII values.
 
-**Description:**Returns the Unicode integer value of a character.
+**Description:** Returns the Unicode integer value of a character.
 
 ### str.strip()
 
 **Usage:**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   data.strip()   `
+```   
+data.strip()
+```
 
-**Why used:**To clean unwanted whitespace from QR data.
+**Why used:** To clean unwanted whitespace from QR data.
 
-**Description:**Removes leading and trailing spaces from a string.
+**Description:** Removes leading and trailing spaces from a string.
 
 🔹 Control Flow & Language Constructs
 -------------------------------------
 
 ### while True
 
-**Why used:**To continuously scan frames until a QR code is detected.
+**Why used:** To continuously scan frames until a QR code is detected.
 
-**Description:**Creates an infinite loop for real-time scanning.
+**Description:** Creates an infinite loop for real-time scanning.
 
 ### if not ret
 
-**Why used:**To ensure only valid frames are processed.
+**Why used:** To ensure only valid frames are processed.
 
-**Description:**Skips the loop iteration if camera frame capture fails.
+**Description:** Skips the loop iteration if camera frame capture fails.
 
 ### return
 
-**Why used:**To immediately exit the function once QR data is detected.
+**Why used:** To immediately exit the function once QR data is detected.
 
-**Description:**Returns the decoded QR value to the calling function.
+**Description:** Returns the decoded QR value to the calling function.
 
 📌 Summary
 ----------
