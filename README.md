@@ -1,3 +1,5 @@
+<img width="500" height="500" alt="logo" src="https://github.com/user-attachments/assets/034b0bbd-702d-4f76-a2b5-29c2244cd37f" />
+
 🛒 Supermarket Billing System (Python & MySQL)
 ==============================================
 
