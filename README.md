@@ -5,6 +5,11 @@
 
 A robust, database-driven **Point of Sale (POS)** application that manages customer registration, real-time inventory tracking, and complex transactional analytics. This project demonstrates the integration of Python logic with a relational database to solve real-world retail challenges.
 
+<img width="1920" height="1030" alt="terminal interface" src="https://github.com/user-attachments/assets/12156655-b65d-40d9-8992-437b685968e2" />
+
+
+
+
 ## 📺 Video Tutorials
 Follow the step-by-step build on YouTube:
 * **Full Series Playlist:** [Supermarket Billing System Playlist](https://www.youtube.com/playlist?list=PLsR48r3j5coUn0cu66ujQj1_e4d7OtLhJ)
