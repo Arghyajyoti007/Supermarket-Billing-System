@@ -57,7 +57,7 @@ def generate_bill_pdf(cust_phone_num):
 
     # Supermarket title
     pdf.set_font("Arial", "B", 20)
-    pdf.cell(0, 10, "STAR SUPERMARKET", ln=True, align="C")
+    pdf.cell(0, 10, "STAR MART", ln=True, align="C")
 
     # Cash memo heading
     pdf.set_font("Arial", "B", 16)
