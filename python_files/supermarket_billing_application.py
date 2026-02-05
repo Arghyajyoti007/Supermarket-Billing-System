@@ -7,7 +7,7 @@ import pdf_generator
 conn_obj = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Your Password for Database",
+    password="Your PWD",
     database="Billing_Application",
     consume_results=True # Helps prevent "Unread result" errors
 )
@@ -17,6 +17,8 @@ def check_conn():
     """Wakes up the database if it went to sleep."""
     if not conn_obj.is_connected():
         conn_obj.reconnect(attempts=3, delay=2)
+
+
 
 def data_retrieve(ph_no):
     check_conn()
@@ -105,3 +107,23 @@ if __name__ == "__main__":
         # Close connection ONLY when running this file directly
         cur_obj.close()
         conn_obj.close()
+
+def get_daily_sales_data():
+    """Fetches hourly sales for the current day for the Streamlit chart."""
+    check_conn()
+    # This query groups sales by the hour to show the day's trend
+    query = """
+        SELECT HOUR(timestamp) as hour, SUM(total_amount_payble_after_tax) as sales 
+        FROM analytics_table 
+        WHERE DATE(timestamp) = CURDATE()
+        GROUP BY HOUR(timestamp)
+        ORDER BY hour
+    """
+    try:
+        cur_obj.execute(query)
+        result = cur_obj.fetchall()
+        # Returns a list of tuples [(hour, sales), ...] or empty list
+        return result if result else []
+    except Exception as e:
+        print(f"Database Chart Error: {e}")
+        return []
