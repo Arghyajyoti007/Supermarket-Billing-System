@@ -160,6 +160,7 @@ with right:
                     backend.bill_data_entry(
                         real_bill_id, 
                         st.session_state.customer[0], 
+                        st.session_state.customer[1],  # customer name
                         item['PID'], 
                         item['Qty']
                     )
@@ -181,4 +182,5 @@ with right:
                     st.error("PDF generation failed. Check pdf_generator.py logic.")
     else:
         st.info("The cart is empty. Identify a customer to begin.")
+
 
