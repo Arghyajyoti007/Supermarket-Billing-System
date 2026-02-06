@@ -52,6 +52,7 @@ def generate_bill_pdf(bill_id):
 
         # Bill Metadata
         pdf.set_font("Arial", '', 10)
+        pdf.cell(100, 7, f"Customer: {analytics[2]}", 0, 1, 'L')
         pdf.cell(100, 7, f"Bill No: {analytics[0]}", 0)
         pdf.cell(100, 7, f"Date: {analytics[4]}", 0, 1, 'R')
         pdf.cell(100, 7, f"Phone: {analytics[1]}", 0, 1, 'L')
