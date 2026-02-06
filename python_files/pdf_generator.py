@@ -31,15 +31,18 @@ def generate_bill_pdf(bill_id):
         cust_name = cur.fetchone()
         customer_display_name = cust_name[0] if cust_name else "Valued Customer"
 
+        # -----------------------------------
         # 2. Fetch Product Details
+        # CHANGED FROM 'bill_data' TO 'billing_details' TO MATCH YOUR SCHEMA
         query = """
             SELECT p.p_name, p.p_price, b.p_quantity, (p.p_price * b.p_quantity) as total
-            FROM bill_data b
+            FROM billing_details b
             JOIN p_details p ON b.p_id = p.pid
             WHERE b.bill_id = %s
         """
         cur.execute(query, (bill_id,))
         items = cur.fetchall()
+        # -------------------------------------
 
         if not items:
             cur.close()
