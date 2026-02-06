@@ -103,15 +103,14 @@ def bill_id_retrieve_Analytics_table():
     except:
         return None
 
-def bill_data_entry(bill_id, c_id, p_id, p_qty):
+def bill_data_entry(bill_id, cust_id, cust_name, p_id, p_qty):
     check_conn()
-    # Updated to include cust_id (c_id) to fix Error 1364
-    query = "INSERT INTO billing_details (bill_id, cust_id, p_id, p_quantity) VALUES (%s, %s, %s, %s)"
-    try:
-        cur_obj.execute(query, (bill_id, c_id, p_id, p_qty))
-        conn_obj.commit()
-    except Exception as e:
-        print(f"Error: {e}")
+    query = """
+    INSERT INTO billing_details (bill_id, cust_id, cust_name, p_id, p_quantity)
+    VALUES (%s, %s, %s, %s, %s)
+    """
+    cur_obj.execute(query, (bill_id, cust_id, cust_name, p_id, p_qty))
+    conn_obj.commit()
 
 # --- IMPORTANT CLI WRAPPER ---
 def main():
