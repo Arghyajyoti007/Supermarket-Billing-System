@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 import billing_application_for_supermarket as backend
-import qr_scanner
+import pdf_generator
 import time
 import base64
-import pdf_generator
 
 # --- THEME COLORS ---
 TEAL_DARK = "#005461"
@@ -39,42 +38,20 @@ def open_pdf_popup(file_path):
     """
     st.components.v1.html(js, height=0)
 
-def get_base64(bin_file):
-    try:
-        with open(bin_file, 'rb') as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
-    except:
-        return ""
-
 # --- CSS STYLING ---
-bin_str = get_base64('bg1.jpg')
-logo_str = get_base64('logo.png')
-
+# Note: Ensure bg1.jpg and logo.png exist in your repo
 bg_style = f'''
 <style>
     .stApp {{
-        background-image: linear-gradient(rgba(0, 84, 97, 0.85), rgba(0, 84, 97, 0.95)), url("data:image/png;base64,{bin_str}");
-        background-size: cover; color: white;
+        background-color: {TEAL_DARK};
+        color: white;
     }}
-    header[data-testid="stHeader"] {{ visibility: hidden; }}
-    .sticky-header {{
-        position: fixed; top: 0; left: 0; width: 100%; height: 80px;
-        background-color: {TEAL_DARK}; display: flex; align-items: center;
-        padding: 0 50px; z-index: 1000; border-bottom: 3px solid {MINT_LIGHT};
-    }}
-    .main-content-wrapper {{ margin-top: 100px; }}
     .stButton>button {{
         background-color: {MINT_DARK} !important; color: white !important;
         border: none !important; font-weight: bold; width: 100%;
     }}
     [data-testid="stMetricValue"] {{ color: {MINT_LIGHT} !important; }}
 </style>
-<div class="sticky-header">
-    <img src="data:image/png;base64,{logo_str}" height="50" style="margin-right:20px;">
-    <h1 style="color:white; margin:0; font-family:sans-serif; letter-spacing:2px;">STAR MART | PREMIUM POS</h1>
-</div>
-<div class="main-content-wrapper"></div>
 '''
 st.markdown(bg_style, unsafe_allow_html=True)
 
@@ -105,25 +82,24 @@ with left:
     if st.session_state.customer == "NEW":
         st.warning("Customer not found!")
         with st.expander("📝 Register New Customer", expanded=True):
-            new_name = st.text_input("Full Name")
-            new_addr = st.text_area("Address")
+            new_name = st.text_input("Full Name", key="reg_name")
+            new_addr = st.text_area("Address", key="reg_addr")
             if st.button("Complete Registration"):
                 if new_name and new_addr:
-                    backend.customer_entry(new_name, new_addr, ph)
-                    time.sleep(0.5) # Sync time for Aiven
-                    user = backend.data_retrieve(ph)
-                    if user:
-                        st.session_state.customer = user
-                        st.success("Registration Successful!")
-                        st.rerun()
+                    success = backend.customer_entry(new_name, new_addr, ph)
+                    if success:
+                        time.sleep(1) # Sync time for Aiven
+                        user = backend.data_retrieve(ph)
+                        if user:
+                            st.session_state.customer = user
+                            st.rerun()
                 else:
                     st.error("Please fill all details")
 
-    # PRODUCT SECTION (Only unlocks if customer is identified)
+    # PRODUCT SECTION
     if isinstance(st.session_state.customer, tuple):
         st.divider()
         st.write(f"**Billing for:** {st.session_state.customer[1]}")
-        st.subheader("📦 Product Availability")
         
         backend.check_conn()
         backend.cur_obj.execute("SELECT pid, p_name, p_price, p_stock FROM p_details")
@@ -139,13 +115,6 @@ with left:
             else:
                 if st.button(f"Add {prod_data[1]}"):
                     st.session_state.active_item = prod_data
-
-        if st.button("🔍 SCAN QR"):
-            data = qr_scanner.qr_code_scanner()
-            if data:
-                pid = data.split("\t")[0]
-                p = backend.product_details_retrieve(pid)
-                if p: st.session_state.active_item = p
 
         if st.session_state.active_item:
             item = st.session_state.active_item
@@ -165,7 +134,8 @@ with right:
     st.subheader("🛒 Current Bill")
     if st.session_state.cart:
         df = pd.DataFrame(st.session_state.cart)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        # 2026 Compliant: width='stretch' replaces use_container_width
+        st.dataframe(df, width='stretch', hide_index=True)
 
         st.divider()
         gst_percent = st.number_input("Enter GST %", min_value=0, max_value=100, value=18)
@@ -180,29 +150,28 @@ with right:
         c3.metric("Grand Total", f"₹{grand_total:,.2f}")
 
         if st.button("🏁 FINALIZE & PRINT"):
-            real_bill_id = backend.data_analysis_entry(st.session_state.customer[3], subtotal, grand_total)
+            # 1. Update Analytics Table (Using ph from text_input)
+            real_bill_id = backend.data_analysis_entry(ph, subtotal, grand_total)
             
             if real_bill_id:
+                # 2. Update Billing Details
                 for item in st.session_state.cart:
-                    # ENSURE THIS FUNCTION IN BACKEND USES 'billing_details' TABLE
-                    backend.bill_data_entry(real_bill_id, st.session_state.customer[0], st.session_state.customer[1],
-                                            item['PID'], item['Qty'])
+                    backend.bill_data_entry(real_bill_id, item['PID'], item['Qty'])
 
-                # Generate the PDF
+                # 3. Generate PDF
                 generated_file = pdf_generator.generate_bill_pdf(real_bill_id)
                 
                 if generated_file:
                     st.balloons()
                     open_pdf_popup(generated_file)
                     
-                    # Reset State
+                    # 4. Reset State
                     st.session_state.cart = []
                     st.session_state.total = 0.0
                     st.session_state.customer = None
                     time.sleep(2)
                     st.rerun()
                 else:
-                    st.error("PDF could not be generated. Check table names in pdf_generator.py")
+                    st.error("PDF generation failed. Check pdf_generator.py logic.")
     else:
-        st.info("The cart is empty. Identify a customer and add products to begin.")
-
+        st.info("The cart is empty. Identify a customer to begin.")
