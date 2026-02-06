@@ -103,16 +103,15 @@ def bill_id_retrieve_Analytics_table():
     except:
         return None
 
-def bill_data_entry(bill_id, cust_id, cust_name, p_id, p_quantity):
+def bill_data_entry(bill_id, c_id, c_name, p_id, p_qty):
     check_conn()
-    # Now we pass the bill_id directly from the finalized analytics entry
-    query = "INSERT INTO billing_details (bill_id, cust_id, cust_name, p_id, p_quantity) VALUES (%s, %s, %s, %s, %s)"
+    # Ensure this matches your 'billing_details' schema exactly
+    query = "INSERT INTO billing_details (bill_id, p_id, p_quantity) VALUES (%s, %s, %s)"
     try:
-        cur_obj.execute(query, (bill_id, cust_id, cust_name, p_id, p_quantity))
+        cur_obj.execute(query, (bill_id, p_id, p_qty))
         conn_obj.commit()
-    except mysql.connector.Error as e:
-        print("Error in billing entry:", e)
-        conn_obj.rollback()
+    except Exception as e:
+        print(f"Error: {e}")
 
 # --- IMPORTANT CLI WRAPPER ---
 def main():
