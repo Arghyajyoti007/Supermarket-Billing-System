@@ -5,39 +5,63 @@ import pdf_generator
 import web_qr_scanner
 import time
 import base64
+import os
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Star Mart POS", layout="wide")
+
+# ---------------- UTILS ----------------
+def load_image_base64(filename):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(current_dir, filename)
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 # ---------------- HEADER ----------------
 st.markdown(
     "<h1 style='text-align:center;color:white;'>⭐ Star Mart POS Terminal</h1>",
     unsafe_allow_html=True
 )
-st.image("logo.png", width=120)
 
-# ---------------- BACKGROUND ----------------
-def add_bg(image):
-    with open(image, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
+# -------- LOGO (FIXED: Base64, Cloud-safe) --------
+try:
+    logo_base64 = load_image_base64("logo.png")
+    st.markdown(
+        f"""
+        <div style="text-align:center; margin-bottom: 10px;">
+            <img src="data:image/png;base64,{logo_base64}" width="120">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+except Exception:
+    st.warning("Logo not found. Continuing without logo.")
+
+# ---------------- BACKGROUND (FIXED) ----------------
+try:
+    bg_base64 = load_image_base64("bg1.jpg")
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
+            background-image: url("data:image/jpg;base64,{bg_base64}");
             background-size: cover;
+            background-position: center;
         }}
         </style>
         """,
         unsafe_allow_html=True
     )
-
-add_bg("bg1.jpg")
+except Exception:
+    st.warning("Background image not found.")
 
 # ---------------- SESSION STATE ----------------
-if "cart" not in st.session_state: st.session_state.cart = []
-if "customer" not in st.session_state: st.session_state.customer = None
-if "total" not in st.session_state: st.session_state.total = 0.0
+if "cart" not in st.session_state:
+    st.session_state.cart = []
+if "customer" not in st.session_state:
+    st.session_state.customer = None
+if "total" not in st.session_state:
+    st.session_state.total = 0.0
 
 left, right = st.columns([1, 2], gap="large")
 
