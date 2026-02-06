@@ -1,4 +1,4 @@
-import cv2
+import cv2 #OpenCV
 
 def qr_code_scanner():
     # Initialize camera capture
@@ -39,8 +39,9 @@ def qr_code_scanner():
             cv2.destroyAllWindows()
 
             # Print and return cleaned QR data
-            print(data.strip())
+            # print(data.strip())
             return data.strip()
+
 
         # Exit scanner when 'q' key is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
