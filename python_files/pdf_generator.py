@@ -1,125 +1,82 @@
 from fpdf import FPDF
 import mysql.connector
-import os
-import sys
-import subprocess
-
-# Establish MySQL database connection
-conn_obj = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Arghya@123",
-    database="Billing_Application"
-)
-
-# Cursor object to execute SQL queries
-cur_obj = conn_obj.cursor()
+from datetime import datetime
 
 
-# ---------------- BILL PDF GENERATION FUNCTION ----------------
-def generate_bill_pdf(cust_phone_num):
-    # Fetch latest bill summary for the given customer phone number
+def generate_bill_pdf(bill_id):
+    # Establish connection
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Arghya@123",
+        database="Billing_Application"
+    )
+    cur = conn.cursor()
+
+    # 1. Fetch Analytics Data (Header Info)
+    cur.execute(
+        "SELECT bill_id, c_name, c_ph_no, total_bill_value, total_amount_payble_after_tax, timestamp FROM analytics_table WHERE bill_id = %s",
+        (bill_id,))
+    analytics = cur.fetchone()
+
+    # 2. Fetch Product Details (Line Items)
+    # We join with p_details to get the actual product names and prices
     query = """
-        SELECT bill_id, c_name, c_ph_no,
-               total_bill_value,
-               total_amount_payble_after_tax,
-               timestamp
-        FROM analytics_table
-        WHERE c_ph_no = %s
-        ORDER BY bill_id DESC
-        LIMIT 1
-    """
-    cur_obj.execute(query, (cust_phone_num,))
-    bill_summary = cur_obj.fetchone()
-
-    # If no bill data exists, exit function
-    if not bill_summary:
-        print("No billing data found to generate PDF.")
-        return
-
-    # Unpack bill summary data
-    bill_id, cust_name, ph_no, total_amt, final_amt, bill_date = bill_summary
-
-    # Fetch item-wise purchase details for the bill
-    query = """
-        SELECT p.p_name, p.p_price, b.p_quantity
+        SELECT p.p_name, p.p_price, b.p_quantity, (p.p_price * b.p_quantity) as total
         FROM billing_details b
         JOIN p_details p ON b.p_id = p.pid
         WHERE b.bill_id = %s
     """
-    cur_obj.execute(query, (bill_id,))
-    items = cur_obj.fetchall()
+    cur.execute(query, (bill_id,))
+    items = cur.fetchall()
 
-    # ---------------- PDF CREATION ----------------
+    if not analytics or not items:
+        print("No billing data found to generate PDF.")
+        return
+
+    # --- PDF GENERATION ---
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # Supermarket title
-    pdf.set_font("Arial", "B", 20)
-    pdf.cell(0, 10, "STAR MART", ln=True, align="C")
-
-    # Cash memo heading
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "CASH MEMO", ln=True, align="C")
-
-
-    # Bill metadata
-    pdf.ln(5)
-    pdf.set_font("Arial", size=10)
-    pdf.cell(0, 8, f"Bill No: {bill_id}", ln=True)
-    pdf.cell(0, 8, f"Date: {bill_date.strftime('%d-%m-%Y %H:%M')}", ln=True)
-
-
-    # Customer details
-    pdf.ln(5)
-    pdf.cell(0, 8, f"Customer Name: {cust_name}", ln=True)
-    pdf.cell(0, 8, f"Phone Number: {ph_no}", ln=True)
-
-    pdf.ln(8)
-
-    # ---------------- TABLE HEADER ----------------
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(80, 8, "Description", border=1)
-    pdf.cell(30, 8, "Price", border=1)
-    pdf.cell(30, 8, "Quantity", border=1)
-    pdf.cell(40, 8, "Amount", border=1, ln=True)
-
-    # ---------------- TABLE ROWS ----------------
-    pdf.set_font("Arial", size=10)
-    for name, price, qty in items:
-        amount = float(price) * qty
-
-        pdf.cell(80, 8, name, border=1)
-        pdf.cell(30, 8, f"{price}", border=1)
-        pdf.cell(30, 8, str(qty), border=1)
-        pdf.cell(40, 8, f"{amount:.2f}", border=1, ln=True)
-
-    pdf.ln(5)
-
-    # ---------------- TOTALS ----------------
-    pdf.cell(140, 8, "Total", border=1)
-    pdf.cell(40, 8, f"{total_amt:.2f}", border=1, ln=True)
-
-    pdf.cell(140, 8, "Total Payable (After GST)", border=1)
-    pdf.cell(40, 8, f"{final_amt:.2f}", border=1, ln=True)
-
-    # Footer message
+    # Header
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, "STAR MART - PREMIUM BILL", ln=True, align='C')
+    pdf.set_font("Arial", '', 12)
+    pdf.cell(200, 10, f"Bill No: {analytics[0]} | Date: {analytics[5]}", ln=True, align='C')
+    pdf.cell(200, 10, f"Customer: {analytics[1]} ({analytics[2]})", ln=True, align='C')
     pdf.ln(10)
-    pdf.cell(0, 8, "Thank you for shopping with us!", ln=True, align="C")
 
-    # ---------------- SAVE PDF ----------------
+    # Table Header
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(80, 10, "Description", 1)
+    pdf.cell(30, 10, "Price", 1)
+    pdf.cell(30, 10, "Qty", 1)
+    pdf.cell(40, 10, "Total", 1)
+    pdf.ln()
+
+    # Table Rows
+    pdf.set_font("Arial", '', 12)
+    for row in items:
+        pdf.cell(80, 10, str(row[0]), 1)
+        pdf.cell(30, 10, str(row[1]), 1)
+        pdf.cell(30, 10, str(row[2]), 1)
+        pdf.cell(40, 10, str(row[3]), 1)
+        pdf.ln()
+
+    # Totals
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(140, 10, "Subtotal", 0)
+    pdf.cell(40, 10, f"Rs. {analytics[3]}", 0)
+    pdf.ln()
+    pdf.cell(140, 10, "Total (Inc. GST 18%)", 0)
+    pdf.cell(40, 10, f"Rs. {analytics[4]}", 0)
+
+
+
+    # Save PDF
     file_name = f"Bill_{bill_id}.pdf"
     pdf.output(file_name)
-    print(f"PDF generated successfully: {file_name}")
-
-    # ---------------- AUTO-OPEN PDF ----------------
-    try:
-        if sys.platform.startswith("win"):
-            os.startfile(file_name)       # Windows
-        elif sys.platform.startswith("darwin"):
-            subprocess.call(["open", file_name])  # macOS
-        else:
-            subprocess.call(["xdg-open", file_name])  # Linux
-    except Exception as e:
-        print("PDF generated but could not be auto-opened:", e)
+    cur.close()
+    conn.close()
+    return file_name
