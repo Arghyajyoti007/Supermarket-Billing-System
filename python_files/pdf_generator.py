@@ -1,82 +1,111 @@
 from fpdf import FPDF
 import mysql.connector
-from datetime import datetime
-
+import streamlit as st
 
 def generate_bill_pdf(bill_id):
-    # Establish connection
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Arghya@123",
-        database="Billing_Application"
-    )
-    cur = conn.cursor()
+    # Establish cloud connection using Streamlit Secrets
+    try:
+        conn = mysql.connector.connect(
+            host=st.secrets["mysql"]["host"],
+            port=st.secrets["mysql"]["port"],
+            user=st.secrets["mysql"]["user"],
+            password=st.secrets["mysql"]["password"],
+            database="Billing_Application"
+        )
+        cur = conn.cursor()
 
-    # 1. Fetch Analytics Data (Header Info)
-    cur.execute(
-        "SELECT bill_id, c_name, c_ph_no, total_bill_value, total_amount_payble_after_tax, timestamp FROM analytics_table WHERE bill_id = %s",
-        (bill_id,))
-    analytics = cur.fetchone()
+        # 1. Fetch Analytics Data (Header Info)
+        # Matching columns from your analytics_table schema
+        cur.execute(
+            "SELECT bill_id, c_ph_no, total_bill_value, total_amount_payble_after_tax, timestamp FROM analytics_table WHERE bill_id = %s",
+            (bill_id,))
+        analytics = cur.fetchone()
 
-    # 2. Fetch Product Details (Line Items)
-    # We join with p_details to get the actual product names and prices
-    query = """
-        SELECT p.p_name, p.p_price, b.p_quantity, (p.p_price * b.p_quantity) as total
-        FROM billing_details b
-        JOIN p_details p ON b.p_id = p.pid
-        WHERE b.bill_id = %s
-    """
-    cur.execute(query, (bill_id,))
-    items = cur.fetchall()
+        if not analytics:
+            return None
 
-    if not analytics or not items:
-        print("No billing data found to generate PDF.")
-        return
+        # Fetch Customer Name separately (since analytics stores ph_no)
+        cur.execute("SELECT c_full_name FROM cust_details WHERE c_ph_no = %s", (analytics[1],))
+        cust_name = cur.fetchone()
+        customer_display_name = cust_name[0] if cust_name else "Valued Customer"
 
-    # --- PDF GENERATION ---
-    pdf = FPDF()
-    pdf.add_page()
+        # 2. Fetch Product Details (Line Items)
+        # Joins billing_details (or bill_data based on your backend) with p_details
+        query = """
+            SELECT p.p_name, p.p_price, b.p_quantity, (p.p_price * b.p_quantity) as total
+            FROM bill_data b
+            JOIN p_details p ON b.p_id = p.pid
+            WHERE b.bill_id = %s
+        """
+        cur.execute(query, (bill_id,))
+        items = cur.fetchall()
 
-    # Header
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, "STAR MART - PREMIUM BILL", ln=True, align='C')
-    pdf.set_font("Arial", '', 12)
-    pdf.cell(200, 10, f"Bill No: {analytics[0]} | Date: {analytics[5]}", ln=True, align='C')
-    pdf.cell(200, 10, f"Customer: {analytics[1]} ({analytics[2]})", ln=True, align='C')
-    pdf.ln(10)
+        if not items:
+            return None
 
-    # Table Header
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(80, 10, "Description", 1)
-    pdf.cell(30, 10, "Price", 1)
-    pdf.cell(30, 10, "Qty", 1)
-    pdf.cell(40, 10, "Total", 1)
-    pdf.ln()
+        # --- PDF GENERATION ---
+        pdf = FPDF()
+        pdf.add_page()
 
-    # Table Rows
-    pdf.set_font("Arial", '', 12)
-    for row in items:
-        pdf.cell(80, 10, str(row[0]), 1)
-        pdf.cell(30, 10, str(row[1]), 1)
-        pdf.cell(30, 10, str(row[2]), 1)
-        pdf.cell(40, 10, str(row[3]), 1)
-        pdf.ln()
+        # Header Section
+        pdf.set_font("Arial", 'B', 20)
+        pdf.set_text_color(0, 84, 97) # Star Mart Teal
+        pdf.cell(200, 15, "STAR MART", ln=True, align='C')
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(200, 8, "PREMIUM INVOICE", ln=True, align='C')
+        pdf.ln(5)
 
-    # Totals
-    pdf.ln(5)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(140, 10, "Subtotal", 0)
-    pdf.cell(40, 10, f"Rs. {analytics[3]}", 0)
-    pdf.ln()
-    pdf.cell(140, 10, "Total (Inc. GST 18%)", 0)
-    pdf.cell(40, 10, f"Rs. {analytics[4]}", 0)
+        # Invoice Metadata
+        pdf.set_font("Arial", '', 10)
+        pdf.cell(100, 7, f"Bill No: {analytics[0]}", 0)
+        pdf.cell(100, 7, f"Date: {analytics[4]}", 0, 1, 'R')
+        pdf.cell(100, 7, f"Customer: {customer_display_name}", 0)
+        pdf.cell(100, 7, f"Phone: {analytics[1]}", 0, 1, 'R')
+        pdf.ln(10)
 
+        # Table Header
+        pdf.set_fill_color(36, 158, 148) # Star Mart Mint
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(80, 10, " Description", 1, 0, 'L', True)
+        pdf.cell(30, 10, "Price", 1, 0, 'C', True)
+        pdf.cell(30, 10, "Qty", 1, 0, 'C', True)
+        pdf.cell(40, 10, "Total", 1, 1, 'C', True)
 
+        # Table Rows
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", '', 11)
+        for row in items:
+            pdf.cell(80, 10, f" {str(row[0])}", 1)
+            pdf.cell(30, 10, f"{row[1]:.2f}", 1, 0, 'C')
+            pdf.cell(30, 10, str(row[2]), 1, 0, 'C')
+            pdf.cell(40, 10, f"{row[3]:.2f}", 1, 1, 'C')
 
-    # Save PDF
-    file_name = f"Bill_{bill_id}.pdf"
-    pdf.output(file_name)
-    cur.close()
-    conn.close()
-    return file_name
+        # Totals Section
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(140, 10, "Subtotal", 0, 0, 'R')
+        pdf.cell(40, 10, f"Rs. {analytics[2]:.2f}", 1, 1, 'C')
+        
+        pdf.set_fill_color(240, 240, 240)
+        pdf.cell(140, 10, "Grand Total (Inc. GST)", 0, 0, 'R')
+        pdf.cell(40, 10, f"Rs. {analytics[3]:.2f}", 1, 1, 'C', True)
+
+        # Footer
+        pdf.ln(20)
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(200, 10, "Thank you for shopping at Star Mart!", 0, 0, 'C')
+
+        # Save PDF
+        file_name = f"Bill_{bill_id}.pdf"
+        pdf.output(file_name)
+        
+        cur.close()
+        conn.close()
+        return file_name
+
+    except Exception as e:
+        st.error(f"PDF Error: {e}")
+        return None
