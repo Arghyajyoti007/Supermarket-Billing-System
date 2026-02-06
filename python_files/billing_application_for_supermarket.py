@@ -14,11 +14,16 @@ import streamlit as st
 # )
 # cur_obj = conn_obj.cursor()
 
+# --- INITIALIZE GLOBAL VARIABLES ---
+conn_obj = None
+cur_obj = None
+# ----------------------------------
+
 def check_conn():
     global conn_obj, cur_obj
-    # This checks if we already have a connection; if not, it creates one
     try:
-        if 'conn_obj' not in globals() or not conn_obj.is_connected():
+        # Check if the connection exists and is still alive
+        if conn_obj is None or not conn_obj.is_connected():
             conn_obj = mysql.connector.connect(
                 host=st.secrets["mysql"]["host"],
                 port=st.secrets["mysql"]["port"],
@@ -27,8 +32,9 @@ def check_conn():
                 database=st.secrets["mysql"]["database"]
             )
             cur_obj = conn_obj.cursor(buffered=True)
+            # Optional: st.success("Connected to Cloud DB!") 
     except Exception as e:
-        st.error(f"Could not connect to Cloud DB: {e}")
+        st.error(f"Database Connection Failed: {e}")
 
 
 
