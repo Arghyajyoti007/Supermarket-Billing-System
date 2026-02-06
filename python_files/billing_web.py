@@ -180,27 +180,29 @@ with right:
         c3.metric("Grand Total", f"₹{grand_total:,.2f}")
 
         if st.button("🏁 FINALIZE & PRINT"):
-            # 1. Update Analytics Table
             real_bill_id = backend.data_analysis_entry(st.session_state.customer[3], subtotal, grand_total)
             
             if real_bill_id:
-                # 2. Update Billing Details
                 for item in st.session_state.cart:
+                    # ENSURE THIS FUNCTION IN BACKEND USES 'billing_details' TABLE
                     backend.bill_data_entry(real_bill_id, st.session_state.customer[0], st.session_state.customer[1],
                                             item['PID'], item['Qty'])
 
-                # 3. Generate PDF
-                pdf_generator.generate_bill_pdf(real_bill_id)
+                # Generate the PDF
+                generated_file = pdf_generator.generate_bill_pdf(real_bill_id)
                 
-                # 4. Success UI
-                st.balloons()
-                open_pdf_popup(f"Bill_{real_bill_id}.pdf")
-                
-                # 5. Reset State
-                st.session_state.cart = []
-                st.session_state.total = 0.0
-                st.session_state.customer = None
-                time.sleep(2)
-                st.rerun()
+                if generated_file:
+                    st.balloons()
+                    open_pdf_popup(generated_file)
+                    
+                    # Reset State
+                    st.session_state.cart = []
+                    st.session_state.total = 0.0
+                    st.session_state.customer = None
+                    time.sleep(2)
+                    st.rerun()
+                else:
+                    st.error("PDF could not be generated. Check table names in pdf_generator.py")
     else:
         st.info("The cart is empty. Identify a customer and add products to begin.")
+
