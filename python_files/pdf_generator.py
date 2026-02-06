@@ -36,27 +36,40 @@ def generate_bill_pdf(bill_id):
         # PDF Layout Logic
         pdf = FPDF()
         pdf.add_page()
+    
+        # Header
         pdf.set_font("Arial", 'B', 16)
-        pdf.cell(200, 10, "STAR MART INVOICE", ln=True, align='C')
+        pdf.cell(200, 10, "STAR MART - PREMIUM BILL", ln=True, align='C')
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(200, 10, f"Bill No: {analytics[0]} | Date: {analytics[5]}", ln=True, align='C')
+        pdf.cell(200, 10, f"Customer: {analytics[1]} ({analytics[2]})", ln=True, align='C')
         pdf.ln(10)
-
+    
         # Table Header
-        pdf.set_fill_color(200, 220, 255)
-        pdf.cell(80, 10, "Item", 1, 0, 'C', True)
-        pdf.cell(30, 10, "Qty", 1, 0, 'C', True)
-        pdf.cell(40, 10, "Price", 1, 0, 'C', True)
-        pdf.cell(40, 10, "Total", 1, 1, 'C', True)
-
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Description", 1)
+        pdf.cell(30, 10, "Price", 1)
+        pdf.cell(30, 10, "Qty", 1)
+        pdf.cell(40, 10, "Total", 1)
+        pdf.ln()
+    
+        # Table Rows
+        pdf.set_font("Arial", '', 12)
         for row in items:
             pdf.cell(80, 10, str(row[0]), 1)
-            pdf.cell(30, 10, str(row[2]), 1, 0, 'C')
-            pdf.cell(40, 10, f"{float(row[1]):.2f}", 1, 0, 'R')
-            pdf.cell(40, 10, f"{float(row[3]):.2f}", 1, 1, 'R')
-
+            pdf.cell(30, 10, str(row[1]), 1)
+            pdf.cell(30, 10, str(row[2]), 1)
+            pdf.cell(40, 10, str(row[3]), 1)
+            pdf.ln()
+    
         # Totals
         pdf.ln(5)
-        pdf.cell(150, 10, "Grand Total:", 0, 0, 'R')
-        pdf.cell(40, 10, f"Rs. {float(analytics[3]):.2f}", 1, 1, 'R')
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(140, 10, "Subtotal", 0)
+        pdf.cell(40, 10, f"Rs. {analytics[3]}", 0)
+        pdf.ln()
+        pdf.cell(140, 10, "Total (Inc. GST 18%)", 0)
+        pdf.cell(40, 10, f"Rs. {analytics[4]}", 0)
 
         file_name = f"Bill_{bill_id}.pdf"
         pdf.output(file_name)
