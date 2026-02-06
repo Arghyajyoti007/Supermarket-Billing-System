@@ -7,7 +7,7 @@ import pdf_generator
 conn_obj = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Your PWD",
+    password="Arghya@123",
     database="Billing_Application",
     consume_results=True # Helps prevent "Unread result" errors
 )
@@ -69,9 +69,12 @@ def data_analysis_entry(cust_phone_num, calculated_amount, gst_price):
     try:
         cur_obj.execute(query, values)
         conn_obj.commit()
+        # CRITICAL FIX: Get the ID of the row we JUST inserted
+        return cur_obj.lastrowid
     except mysql.connector.Error as e:
         print("Error in analytics:", e)
         conn_obj.rollback()
+        return None
 
 def bill_id_retrieve_Analytics_table():
     check_conn()
@@ -82,13 +85,12 @@ def bill_id_retrieve_Analytics_table():
     except:
         return None
 
-def bill_data_entry(cust_id, cust_name, p_id, p_quantity):
+def bill_data_entry(bill_id, cust_id, cust_name, p_id, p_quantity):
     check_conn()
-    bill_id_db = bill_id_retrieve_Analytics_table()
-    new_bill_id = bill_id_db[0] + 1 if bill_id_db else 1
+    # Now we pass the bill_id directly from the finalized analytics entry
     query = "INSERT INTO billing_details (bill_id, cust_id, cust_name, p_id, p_quantity) VALUES (%s, %s, %s, %s, %s)"
     try:
-        cur_obj.execute(query, (new_bill_id, cust_id, cust_name, p_id, p_quantity))
+        cur_obj.execute(query, (bill_id, cust_id, cust_name, p_id, p_quantity))
         conn_obj.commit()
     except mysql.connector.Error as e:
         print("Error in billing entry:", e)
