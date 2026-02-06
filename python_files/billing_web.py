@@ -55,6 +55,60 @@ try:
 except Exception:
     st.warning("Background image not found.")
 
+# ------------------ADDING COLOR CSS---------------------------
+st.markdown("""
+<style>
+/* Main container cards */
+.block-container {
+    padding-top: 1rem;
+}
+
+/* Headers */
+h1, h2, h3 {
+    color: #254F22;
+    font-weight: 700;
+}
+
+/* Section cards */
+[data-testid="stVerticalBlock"] > div {
+    background-color: rgba(237, 228, 194, 0.92);
+    padding: 1.2rem;
+    border-radius: 14px;
+    margin-bottom: 1rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: #A03A13;
+    color: white;
+    border-radius: 10px;
+    border: none;
+    padding: 0.55rem 1.2rem;
+    font-weight: 600;
+}
+
+.stButton > button:hover {
+    background-color: #F5824A;
+    color: black;
+}
+
+/* Metrics */
+[data-testid="stMetric"] {
+    background-color: #254F22;
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* Dataframe header */
+thead tr th {
+    background-color: #254F22 !important;
+    color: white !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- SESSION STATE ----------------
 if "cart" not in st.session_state:
     st.session_state.cart = []
@@ -168,14 +222,42 @@ with right:
                     item["Qty"]
                 )
 
-            pdf = pdf_generator.generate_bill_pdf(bill_id)
-            if pdf:
-                st.success("Invoice Generated Successfully")
+            pdf_path = pdf_generator.generate_bill_pdf(bill_id)
+
+            if pdf_path:
+                st.success("🧾 Invoice Generated Successfully")
+            
+                with open(pdf_path, "rb") as f:
+                    pdf_bytes = f.read()
+            
+                # --- Auto open style (embed) ---
+                base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+                pdf_display = f"""
+                    <iframe 
+                        src="data:application/pdf;base64,{base64_pdf}" 
+                        width="100%" 
+                        height="600px" 
+                        style="border:none;">
+                    </iframe>
+                """
+                st.markdown(pdf_display, unsafe_allow_html=True)
+            
+                # --- Download button ---
+                st.download_button(
+                    label="⬇️ Download Invoice PDF",
+                    data=pdf_bytes,
+                    file_name=f"StarMart_Bill_{bill_id}.pdf",
+                    mime="application/pdf"
+                )
+            
+                # Reset session AFTER showing PDF
                 st.session_state.cart = []
                 st.session_state.total = 0.0
                 st.session_state.customer = None
+                
                 time.sleep(1)
                 st.rerun()
     else:
         st.info("Cart is empty. Add products to continue.")
+
 
