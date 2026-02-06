@@ -4,3 +4,7 @@ mysql-connector-python
 fpdf
 opencv-python-headless
 numpy
+# Added for secure cloud-database handshakes
+cryptography
+# Added for advanced PDF/Image handling if needed
+Pillow
