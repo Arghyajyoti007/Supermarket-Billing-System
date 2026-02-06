@@ -11,6 +11,7 @@ def generate_bill_pdf(bill_id):
             user=st.secrets["mysql"]["user"],
             password=st.secrets["mysql"]["password"],
             database="Billing_Application"
+            ssl_disabled=False
         )
         cur = conn.cursor()
 
