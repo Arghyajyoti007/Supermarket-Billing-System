@@ -2,21 +2,33 @@ import math
 import mysql.connector
 import qr_scanner
 import pdf_generator
+import streamlit as st
 
-# Establish connection with reconnection logic
-conn_obj = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Arghya@123",
-    database="Billing_Application",
-    consume_results=True # Helps prevent "Unread result" errors
-)
-cur_obj = conn_obj.cursor()
+# Establish connection with reconnection logic (Used while ran in local system)
+# conn_obj = mysql.connector.connect(
+#     host="localhost",
+#     user="root",
+#     password="Pasword",
+#     database="Billing_Application",
+#     consume_results=True # Helps prevent "Unread result" errors
+# )
+# cur_obj = conn_obj.cursor()
 
 def check_conn():
-    """Wakes up the database if it went to sleep."""
-    if not conn_obj.is_connected():
-        conn_obj.reconnect(attempts=3, delay=2)
+    global conn_obj, cur_obj
+    # This checks if we already have a connection; if not, it creates one
+    try:
+        if 'conn_obj' not in globals() or not conn_obj.is_connected():
+            conn_obj = mysql.connector.connect(
+                host=st.secrets["mysql"]["host"],
+                port=st.secrets["mysql"]["port"],
+                user=st.secrets["mysql"]["user"],
+                password=st.secrets["mysql"]["password"],
+                database=st.secrets["mysql"]["database"]
+            )
+            cur_obj = conn_obj.cursor(buffered=True)
+    except Exception as e:
+        st.error(f"Could not connect to Cloud DB: {e}")
 
 
 
