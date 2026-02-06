@@ -39,7 +39,7 @@ except Exception:
 
 # ---------------- BACKGROUND (FIXED) ----------------
 try:
-    bg_base64 = load_image_base64("bg1.jpg")
+    bg_base64 = load_image_base64("bg2.jpg")
     st.markdown(
         f"""
         <style>
@@ -178,3 +178,4 @@ with right:
                 st.rerun()
     else:
         st.info("Cart is empty. Add products to continue.")
+
