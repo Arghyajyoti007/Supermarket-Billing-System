@@ -5,182 +5,105 @@ import pdf_generator
 import time
 import base64
 
-# --- THEME COLORS ---
-TEAL_DARK = "#005461"
-MINT_DARK = "#249E94"
-MINT_LIGHT = "#3BC1A8"
-
 st.set_page_config(page_title="Star Mart POS", layout="wide")
 
-# Helper to trigger a browser pop-up for the PDF
-def open_pdf_popup(file_path):
-    with open(file_path, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+# ---------- UI HEADER ----------
+st.markdown(
+    "<h1 style='text-align:center;color:white;'>⭐ Star Mart POS Terminal</h1>",
+    unsafe_allow_html=True
+)
 
-    js = f"""
-    <script>
-        var base64 = "{base64_pdf}";
-        var bin = atob(base64);
-        var len = bin.length;
-        var arr = new Uint8Array(len);
-        for (var i = 0; i < len; i++) {{
-            arr[i] = bin.charCodeAt(i);
+st.image("logo.png", width=120)
+
+# ---------- BACKGROUND ----------
+def add_bg(image):
+    with open(image, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
         }}
-        var blob = new Blob([arr], {{type: 'application/pdf'}});
-        var url = URL.createObjectURL(blob);
-        var win = window.open(url, '_blank');
-        if (win) {{
-            win.focus();
-        }} else {{
-            alert('Please allow pop-ups for this website to view the bill.');
-        }}
-    </script>
-    """
-    st.components.v1.html(js, height=0)
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-# --- CSS STYLING ---
-# Note: Ensure bg1.jpg and logo.png exist in your repo
-bg_style = f'''
-<style>
-    .stApp {{
-        background-color: {TEAL_DARK};
-        color: white;
-    }}
-    .stButton>button {{
-        background-color: {MINT_DARK} !important; color: white !important;
-        border: none !important; font-weight: bold; width: 100%;
-    }}
-    [data-testid="stMetricValue"] {{ color: {MINT_LIGHT} !important; }}
-</style>
-'''
-st.markdown(bg_style, unsafe_allow_html=True)
+add_bg("bg1.jpg")
 
-# --- SESSION STATE ---
-if 'cart' not in st.session_state: st.session_state.cart = []
-if 'customer' not in st.session_state: st.session_state.customer = None
-if 'total' not in st.session_state: st.session_state.total = 0.0
-if 'active_item' not in st.session_state: st.session_state.active_item = None
+# ---------- CLOUD QR NOTICE ----------
+st.info("📷 QR scanning works only in local desktop mode (camera access disabled on cloud).")
 
-left, right = st.columns([1, 2], gap="large")
+# ---------- SESSION STATE ----------
+if "cart" not in st.session_state: st.session_state.cart = []
+if "customer" not in st.session_state: st.session_state.customer = None
+if "total" not in st.session_state: st.session_state.total = 0.0
+
+left, right = st.columns([1,2])
 
 with left:
-    st.subheader("👤 Customer Session")
-    ph = st.text_input("Customer Phone", max_chars=10, key="cust_ph")
+    st.subheader("👤 Customer")
+    ph = st.text_input("Phone Number", max_chars=10)
 
-    if st.button("Identify Customer"):
-        if len(ph) == 10:
-            user = backend.data_retrieve(ph)
-            if user:
-                st.session_state.customer = user
-                st.success(f"Welcome Back {user[1]}!")
-            else:
-                st.session_state.customer = "NEW"
-        else:
-            st.error("Enter a valid 10-digit number")
+    if st.button("Identify"):
+        user = backend.data_retrieve(ph)
+        st.session_state.customer = user if user else "NEW"
 
-    # REGISTRATION LOGIC
     if st.session_state.customer == "NEW":
-        st.warning("Customer not found!")
-        with st.expander("📝 Register New Customer", expanded=True):
-            new_name = st.text_input("Full Name", key="reg_name")
-            new_addr = st.text_area("Address", key="reg_addr")
-            if st.button("Complete Registration"):
-                if new_name and new_addr:
-                    success = backend.customer_entry(new_name, new_addr, ph)
-                    if success:
-                        time.sleep(1) # Sync time for Aiven
-                        user = backend.data_retrieve(ph)
-                        if user:
-                            st.session_state.customer = user
-                            st.rerun()
-                else:
-                    st.error("Please fill all details")
+        name = st.text_input("Name")
+        addr = st.text_area("Address")
+        if st.button("Register"):
+            backend.customer_entry(name, addr, ph)
+            time.sleep(1)
+            st.session_state.customer = backend.data_retrieve(ph)
+            st.rerun()
 
-    # PRODUCT SECTION
     if isinstance(st.session_state.customer, tuple):
-        st.divider()
-        st.write(f"**Billing for:** {st.session_state.customer[1]}")
-        
         backend.check_conn()
-        backend.cur_obj.execute("SELECT pid, p_name, p_price, p_stock FROM p_details")
-        all_products = backend.cur_obj.fetchall()
-        prod_options = {f"{p[1]} (₹{p[2]})": p for p in all_products}
+        backend.cur_obj.execute("SELECT pid,p_name,p_price,p_stock FROM p_details")
+        products = backend.cur_obj.fetchall()
 
-        selected_prod_name = st.selectbox("Search Product", options=["-- Select Item --"] + list(prod_options.keys()))
+        prod = st.selectbox("Select Item", products, format_func=lambda x: f"{x[1]} ₹{x[2]}")
+        qty = st.number_input("Qty", 1, prod[3], 1)
 
-        if selected_prod_name != "-- Select Item --":
-            prod_data = prod_options[selected_prod_name]
-            if prod_data[3] <= 0:
-                st.error("Out of Stock!")
-            else:
-                if st.button(f"Add {prod_data[1]}"):
-                    st.session_state.active_item = prod_data
-
-        if st.session_state.active_item:
-            item = st.session_state.active_item
-            with st.form("qty_form", clear_on_submit=True):
-                st.write(f"Selected: **{item[1]}**")
-                qty = st.number_input("Quantity", 1, int(item[3]), 1)
-                if st.form_submit_button("Confirm Add"):
-                    cost = float(item[2]) * qty
-                    st.session_state.cart.append(
-                        {"PID": item[0], "Item": item[1], "Price": float(item[2]), "Qty": qty, "Total": cost})
-                    st.session_state.total += cost
-                    backend.update_stock(item[0], item[3] - qty)
-                    st.session_state.active_item = None
-                    st.rerun()
+        if st.button("Add"):
+            st.session_state.cart.append({
+                "PID": prod[0],
+                "Item": prod[1],
+                "Qty": qty,
+                "Total": prod[2]*qty
+            })
+            st.session_state.total += prod[2]*qty
+            backend.update_stock(prod[0], prod[3]-qty)
+            st.rerun()
 
 with right:
-    st.subheader("🛒 Current Bill")
     if st.session_state.cart:
         df = pd.DataFrame(st.session_state.cart)
-        # 2026 Compliant: width='stretch' replaces use_container_width
-        st.dataframe(df, width='stretch', hide_index=True)
+        st.dataframe(df, hide_index=True)
 
-        st.divider()
-        gst_percent = st.number_input("Enter GST %", min_value=0, max_value=100, value=18)
-
+        gst = st.number_input("GST %", 0, 100, 18)
         subtotal = st.session_state.total
-        gst_amount = (subtotal * gst_percent) / 100
-        grand_total = subtotal + gst_amount
+        total = subtotal + (subtotal*gst/100)
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Subtotal", f"₹{subtotal:,.2f}")
-        c2.metric(f"GST ({gst_percent}%)", f"₹{gst_amount:,.2f}")
-        c3.metric("Grand Total", f"₹{grand_total:,.2f}")
+        st.metric("Subtotal", f"₹{subtotal:.2f}")
+        st.metric("Grand Total", f"₹{total:.2f}")
 
-        if st.button("🏁 FINALIZE & PRINT"):
-            # 1. Update Analytics Table
-            real_bill_id = backend.data_analysis_entry(ph, subtotal, grand_total)
-            
-            if real_bill_id:
-                # 2. Update Billing Details
-                for item in st.session_state.cart:
-                    # Added st.session_state.customer[0] as the 2nd argument (c_id)
-                    backend.bill_data_entry(
-                        real_bill_id, 
-                        st.session_state.customer[0], 
-                        st.session_state.customer[1],  # customer name
-                        item['PID'], 
-                        item['Qty']
-                    )
+        if st.button("Finalize & Print"):
+            bill_id = backend.data_analysis_entry(ph, subtotal, total)
+            for i in st.session_state.cart:
+                backend.bill_data_entry(
+                    bill_id,
+                    st.session_state.customer[0],
+                    i["PID"],
+                    i["Qty"]
+                )
 
-                # 3. Generate PDF
-                generated_file = pdf_generator.generate_bill_pdf(real_bill_id)
-                
-                if generated_file:
-                    st.balloons()
-                    open_pdf_popup(generated_file)
-                    
-                    # 4. Reset State
-                    st.session_state.cart = []
-                    st.session_state.total = 0.0
-                    st.session_state.customer = None
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.error("PDF generation failed. Check pdf_generator.py logic.")
-    else:
-        st.info("The cart is empty. Identify a customer to begin.")
-
-
+            pdf = pdf_generator.generate_bill_pdf(bill_id)
+            if pdf:
+                st.success("Bill Generated")
+                st.session_state.cart = []
+                st.session_state.total = 0
+                st.rerun()
