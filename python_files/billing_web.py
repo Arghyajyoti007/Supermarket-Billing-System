@@ -13,17 +13,13 @@ MINT_LIGHT = "#3BC1A8"
 
 st.set_page_config(page_title="Star Mart POS", layout="wide")
 
-
 # Helper to trigger a browser pop-up for the PDF
-# Replace your existing open_pdf_popup with this:
 def open_pdf_popup(file_path):
     with open(file_path, "rb") as f:
         base64_pdf = base64.b64encode(f.read()).decode('utf-8')
 
-    # Improved JavaScript: Creates a Blob URL which is secure and fast
     js = f"""
     <script>
-    function openPDF() {{
         var base64 = "{base64_pdf}";
         var bin = atob(base64);
         var len = bin.length;
@@ -33,20 +29,15 @@ def open_pdf_popup(file_path):
         }}
         var blob = new Blob([arr], {{type: 'application/pdf'}});
         var url = URL.createObjectURL(blob);
-
-        // Open in a new window/tab
         var win = window.open(url, '_blank');
         if (win) {{
             win.focus();
         }} else {{
             alert('Please allow pop-ups for this website to view the bill.');
         }}
-    }}
-    openPDF();
     </script>
     """
     st.components.v1.html(js, height=0)
-
 
 def get_base64(bin_file):
     try:
@@ -55,7 +46,6 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except:
         return ""
-
 
 # --- CSS STYLING ---
 bin_str = get_base64('bg1.jpg')
@@ -98,33 +88,47 @@ left, right = st.columns([1, 2], gap="large")
 
 with left:
     st.subheader("👤 Customer Session")
-    ph = st.text_input("Customer Phone", max_chars=10)
+    ph = st.text_input("Customer Phone", max_chars=10, key="cust_ph")
 
     if st.button("Identify Customer"):
-        user = backend.data_retrieve(ph)
-        if user:
-            st.session_state.customer = user
-            st.success(f"Welcome Back {user[1]}!")
+        if len(ph) == 10:
+            user = backend.data_retrieve(ph)
+            if user:
+                st.session_state.customer = user
+                st.success(f"Welcome Back {user[1]}!")
+            else:
+                st.session_state.customer = "NEW"
         else:
-            st.session_state.customer = "NEW"
+            st.error("Enter a valid 10-digit number")
 
+    # REGISTRATION LOGIC
     if st.session_state.customer == "NEW":
         st.warning("Customer not found!")
         with st.expander("📝 Register New Customer", expanded=True):
-            name = st.text_input("Full Name")
-            addr = st.text_area("Address")
+            new_name = st.text_input("Full Name")
+            new_addr = st.text_area("Address")
             if st.button("Complete Registration"):
-                backend.customer_entry(name, addr, ph)
-                st.session_state.customer = backend.data_retrieve(ph)
-                st.rerun()
+                if new_name and new_addr:
+                    backend.customer_entry(new_name, new_addr, ph)
+                    time.sleep(0.5) # Sync time for Aiven
+                    user = backend.data_retrieve(ph)
+                    if user:
+                        st.session_state.customer = user
+                        st.success("Registration Successful!")
+                        st.rerun()
+                else:
+                    st.error("Please fill all details")
 
+    # PRODUCT SECTION (Only unlocks if customer is identified)
     if isinstance(st.session_state.customer, tuple):
         st.divider()
+        st.write(f"**Billing for:** {st.session_state.customer[1]}")
         st.subheader("📦 Product Availability")
+        
         backend.check_conn()
         backend.cur_obj.execute("SELECT pid, p_name, p_price, p_stock FROM p_details")
         all_products = backend.cur_obj.fetchall()
-        prod_options = {f"{p[1]} (Stock: {p[3]})": p for p in all_products}
+        prod_options = {f"{p[1]} (₹{p[2]})": p for p in all_products}
 
         selected_prod_name = st.selectbox("Search Product", options=["-- Select Item --"] + list(prod_options.keys()))
 
@@ -146,11 +150,12 @@ with left:
         if st.session_state.active_item:
             item = st.session_state.active_item
             with st.form("qty_form", clear_on_submit=True):
+                st.write(f"Selected: **{item[1]}**")
                 qty = st.number_input("Quantity", 1, int(item[3]), 1)
-                if st.form_submit_button("Add to Cart"):
+                if st.form_submit_button("Confirm Add"):
                     cost = float(item[2]) * qty
                     st.session_state.cart.append(
-                        {"PID": item[0], "Item": item[1], "Price": item[2], "Qty": qty, "Total": cost})
+                        {"PID": item[0], "Item": item[1], "Price": float(item[2]), "Qty": qty, "Total": cost})
                     st.session_state.total += cost
                     backend.update_stock(item[0], item[3] - qty)
                     st.session_state.active_item = None
@@ -159,9 +164,9 @@ with left:
 with right:
     st.subheader("🛒 Current Bill")
     if st.session_state.cart:
-        st.dataframe(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True)
+        df = pd.DataFrame(st.session_state.cart)
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
-        # --- NEW: GST INPUT AND CALCULATION ---
         st.divider()
         gst_percent = st.number_input("Enter GST %", min_value=0, max_value=100, value=18)
 
@@ -175,21 +180,27 @@ with right:
         c3.metric("Grand Total", f"₹{grand_total:,.2f}")
 
         if st.button("🏁 FINALIZE & PRINT"):
-            # Use grand_total with the custom GST entered
+            # 1. Update Analytics Table
             real_bill_id = backend.data_analysis_entry(st.session_state.customer[3], subtotal, grand_total)
+            
             if real_bill_id:
+                # 2. Update Billing Details
                 for item in st.session_state.cart:
                     backend.bill_data_entry(real_bill_id, st.session_state.customer[0], st.session_state.customer[1],
                                             item['PID'], item['Qty'])
 
-                # Generate and Open Pop-up
-                file_name = f"Bill_{real_bill_id}.pdf"
+                # 3. Generate PDF
                 pdf_generator.generate_bill_pdf(real_bill_id)
-                open_pdf_popup(file_name)
-
+                
+                # 4. Success UI
                 st.balloons()
-                st.session_state.cart, st.session_state.total, st.session_state.customer = [], 0.0, None
+                open_pdf_popup(f"Bill_{real_bill_id}.pdf")
+                
+                # 5. Reset State
+                st.session_state.cart = []
+                st.session_state.total = 0.0
+                st.session_state.customer = None
                 time.sleep(2)
                 st.rerun()
     else:
-        st.info("Identify customer to start billing.")
+        st.info("The cart is empty. Identify a customer and add products to begin.")
